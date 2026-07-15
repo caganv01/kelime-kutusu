@@ -30,5 +30,10 @@ async function kelimeEkle({ term, definition_tr, context, url }) {
 }
 
 async function sayac() {
-  return db.cards.count();
+  const now = Date.now();
+  const [toplam, bekleyen] = await Promise.all([
+    db.cards.count(),
+    db.cards.where('due_at').belowOrEqual(now).count()
+  ]);
+  return { toplam, bekleyen };
 }

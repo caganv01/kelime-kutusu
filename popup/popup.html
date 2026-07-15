@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg:     #1c1c1e;
+    --bg2:    #2c2c2e;
+    --line:   #3a3a3c;
+    --text:   #f2f2f7;
+    --dim:    #8e8e93;
+    --accent: #64d2ff;
+    --blue:   #0a84ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+
+  body {
+    width: 240px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+    padding: 16px;
+  }
+
+  h1 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 14px;
+  }
+
+  .kutular {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .kutu {
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .sayi {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .sayi.vurgu { color: var(--accent); }
+
+  .etiket {
+    font-size: 11px;
+    color: var(--dim);
+    margin-top: 3px;
+  }
+
+  button {
+    margin-top: 12px;
+    width: 100%;
+    background: var(--blue);
+    color: #fff;
+    border: 0;
+    border-radius: 9px;
+    padding: 11px;
+    font: 600 13px inherit;
+    cursor: pointer;
+    transition: background .1s;
+  }
+  button:hover    { background: #0071e3; }
+  button:active   { background: #005bb5; }
+  button:disabled { background: var(--bg2); color: var(--dim); cursor: default; }
+
+  .bos {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--dim);
+    line-height: 1.5;
+    text-align: center;
+  }
+  .gizli { display: none; }
+</style>
+</head>
+<body>
+  <h1>Kelime Kutusu</h1>
+
+  <div class="kutular">
+    <div class="kutu">
+      <div class="sayi" id="toplam">–</div>
+      <div class="etiket">toplam</div>
+    </div>
+    <div class="kutu">
+      <div class="sayi vurgu" id="bekleyen">–</div>
+      <div class="etiket">tekrar zamanı</div>
+    </div>
+  </div>
+
+  <button id="quiz" disabled>Quiz başlat</button>
+  <div class="bos gizli" id="bos">Henüz kelime yok.<br>Bir sayfada kelimeye çift tıkla.</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

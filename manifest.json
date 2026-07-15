@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Kelime Kutusu",
+  "version": "0.1.0",
+  "description": "Okurken kelime yakala, sonra quiz yap.",
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "@kelime-kutusu",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": { "required": ["none"] }
+    }
+  },
+
+  "permissions": ["storage", "unlimitedStorage"],
+  "host_permissions": ["https://api.mymemory.translated.net/*"],
+
+  "background": {
+    "scripts": ["lib/dexie.js", "db.js", "background.js"]
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Kelime Kutusu"
+  }
+}

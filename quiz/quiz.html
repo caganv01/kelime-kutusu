@@ -60,8 +60,26 @@
   .buyuk { font-size: 44px; font-weight: 600; letter-spacing: -.02em; }
   .alt { font-size: 14px; color: var(--dim); margin-top: 8px; line-height: 1.6; }
   .gizli { display: none; }
+  .araclar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    display: flex; gap: 8px; justify-content: center;
+    padding: 12px; background: rgba(28,28,30,.92);
+    border-top: 1px solid var(--line); backdrop-filter: blur(8px);
+  }
+  .arac {
+    background: transparent; color: var(--dim);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 7px 14px; font: 500 12px inherit; cursor: pointer;
+  }
+  .arac:hover { color: var(--text); border-color: var(--dim); }
+  #dosya { display: none; }
 </style>
 </head>
+<div class="araclar">
+  <button class="arac" id="disa">↓ Dışa aktar</button>
+  <button class="arac" id="ice">↑ İçe aktar</button>
+  <input type="file" id="dosya" accept="application/json">
+</div>
 <body>
   <div class="app">
     <div id="oyun" class="gizli">

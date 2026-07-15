@@ -101,3 +101,33 @@ function mesaj(baslik, alt) {
   $('mAlt').innerHTML = alt;
   $('mesaj').classList.remove('gizli');
 }
+navigator.storage?.persist?.();
+
+$('disa').onclick = async () => {
+  const veri = await db.cards.toArray();
+  if (!veri.length) return alert('Aktarılacak kelime yok.');
+
+  const blob = new Blob([JSON.stringify(veri)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `kelimeler-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+$('ice').onclick = () => $('dosya').click();
+
+$('dosya').onchange = async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    const veri = JSON.parse(await f.text());
+    if (!Array.isArray(veri) || !veri[0]?.id) throw 0;
+    await db.cards.bulkPut(veri);
+    alert(`${veri.length} kelime aktarıldı.`);
+    location.reload();
+  } catch {
+    alert('Dosya okunamadı.');
+  }
+  e.target.value = '';
+};

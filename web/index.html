@@ -136,7 +136,7 @@
 <script type="module">
   import { auth } from "./firebase.js";
   import {
-    GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+    GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { kelimeEkle, kelimeleriGetir } from "./store.js";
   import { quizBaslat } from "./quiz.js";
@@ -152,10 +152,19 @@
       $(id).classList.toggle("gizli", id !== ad);
   }
 
-  // "Giriş yap" butonu → Google popup'ı aç
-  $("girisBtn").onclick = () => signInWithPopup(auth, saglayici).catch((e) => {
-    alert("Giriş başarısız: " + e.message);
-  });
+  // "Giriş yap" butonu → önce popup, engellenirse yönlendirme ile giriş
+  $("girisBtn").onclick = async () => {
+    try {
+      await signInWithPopup(auth, saglayici);
+    } catch (e) {
+      if (["auth/popup-blocked", "auth/cancelled-popup-request",
+           "auth/operation-not-supported-in-this-environment"].includes(e.code)) {
+        await signInWithRedirect(auth, saglayici); // mobilde daha güvenilir
+      } else {
+        alert("Giriş hatası: " + (e.code || e.message));
+      }
+    }
+  };
 
   // "Çıkış" butonu
   $("cikisBtn").onclick = () => signOut(auth);
@@ -234,7 +243,8 @@
     } else {
       uid = null;
       $("giris").classList.remove("gizli");
-      ekran("panel"); // giriş gizli olduğundan hiçbir şey görünmez
+      // giriş yokken tüm iç ekranları gizle (yoksa panel görünür kalıyordu)
+      for (const id of ["panel", "quizEkran", "sonucEkran"]) $(id).classList.add("gizli");
     }
   });
 </script>

@@ -2,3 +2,6 @@ node_modules/
 web-ext-artifacts/
 *.xpi
 .DS_Store
+
+# Tasarım/spec dosyaları git'e gönderilmez (yerelde kalır)
+docs/

@@ -1,0 +1,31 @@
+# web/ klasörünü GitHub Pages'e yayınlar. Her main push'unda otomatik çalışır.
+name: Deploy web to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Actions sekmesinden elle de tetiklenebilir
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web        # sadece web/ klasörü yayınlanır
+      - id: deployment
+        uses: actions/deploy-pages@v4

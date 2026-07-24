@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kelime Kutusu</title>
+<style>
+  :root {
+    --bg: #1c1c1e; --bg2: #2c2c2e; --line: #3a3a3c;
+    --text: #f2f2f7; --dim: #8e8e93; --accent: #64d2ff; --blue: #0a84ff;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .kutu { width: 100%; max-width: 340px; text-align: center; }
+  h1 { font-size: 22px; font-weight: 600; margin-bottom: 24px; }
+  button {
+    width: 100%;
+    background: var(--blue); color: #fff; border: 0; border-radius: 10px;
+    padding: 13px; font: 600 14px inherit; cursor: pointer;
+  }
+  button:hover { background: #0071e3; }
+  .cikis { background: var(--bg2); color: var(--dim); margin-top: 16px; }
+  .selam { font-size: 18px; margin-bottom: 8px; }
+  .selam b { color: var(--accent); }
+  .gizli { display: none; }
+
+  .test {
+    text-align: left; background: var(--bg2); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px; margin-bottom: 16px;
+  }
+  .test input {
+    width: 100%; margin-bottom: 6px; padding: 8px;
+    border: 1px solid var(--line); border-radius: 6px;
+    background: var(--bg); color: var(--text); font: inherit;
+  }
+  .not { font-size: 12px; color: var(--dim); margin-top: 8px; min-height: 14px; }
+
+  #liste { text-align: left; }
+  .paketKart {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg2); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+  }
+  .paketKart .ad { font-weight: 600; }
+  .paketKart .sayi { font-size: 12px; color: var(--dim); }
+  .paketKart button { width: auto; padding: 8px 14px; font-size: 13px; }
+
+  /* Quiz ekranı */
+  .ust {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--dim); margin-bottom: 10px;
+  }
+  .cubuk { height: 3px; background: var(--bg2); border-radius: 2px; overflow: hidden; }
+  .dolu  { height: 100%; background: var(--accent); width: 0; transition: width .25s; }
+  .soru {
+    text-align: center; padding: 32px 0 24px;
+    font-size: 34px; font-weight: 600; word-break: break-word;
+  }
+  .baglam {
+    text-align: center; font-size: 13px; color: var(--dim);
+    line-height: 1.5; margin: -12px 0 20px; font-style: italic;
+  }
+  .secenekler { display: grid; gap: 8px; }
+  .sec {
+    background: var(--bg2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 13px 15px; font: 14px inherit; text-align: left; cursor: pointer;
+  }
+  .sec:hover:not(:disabled) { background: #3a3a3c; }
+  .sec.dogru  { border-color: #30d158; background: rgba(48,209,88,.14); color: #30d158; }
+  .sec.yanlis { border-color: #ff453a; background: rgba(255,69,58,.14); color: #ff453a; }
+  .sec.solgun { opacity: .35; }
+  .devam { margin-top: 14px; }
+  .geri {
+    background: transparent; color: var(--dim); border: 1px solid var(--line);
+    margin-bottom: 12px; padding: 8px; font-size: 12px;
+  }
+</style>
+</head>
+<body>
+  <div class="kutu">
+    <!-- Giriş ekranı -->
+    <div id="giris">
+      <h1>Kelime Kutusu</h1>
+      <button id="girisBtn">Google ile giriş yap</button>
+    </div>
+
+    <!-- Giriş sonrası -->
+    <div id="panel" class="gizli">
+      <div class="selam">Merhaba <b id="ad"></b> 👋</div>
+      <div id="email" style="color:var(--dim);font-size:13px;margin-bottom:16px"></div>
+
+      <!-- GEÇİCİ test paneli: kelime ekleyip Firestore'u görmek için.
+           Gerçekte kelimeler eklentiden gelecek; bu panel sonra silinecek. -->
+      <div class="test">
+        <input id="tTerm" placeholder="ingilizce kelime">
+        <input id="tTr" placeholder="türkçe karşılık">
+        <button id="tEkle">+ ekle (test)</button>
+        <div id="tSonuc" class="not"></div>
+      </div>
+
+      <div id="liste"></div>
+
+      <button class="cikis" id="cikisBtn">Çıkış yap</button>
+    </div>
+
+    <!-- Quiz ekranı -->
+    <div id="quizEkran" class="gizli">
+      <button class="geri" id="qGeri">← paketler</button>
+      <div class="ust">
+        <span id="qIlerleme"></span>
+        <span id="qSkor"></span>
+      </div>
+      <div class="cubuk"><div class="dolu" id="qDolu"></div></div>
+
+      <div class="soru" id="qSoru"></div>
+      <div class="baglam gizli" id="qBaglam"></div>
+      <div class="secenekler" id="qSecenekler"></div>
+      <button class="devam gizli" id="qDevam">Devam</button>
+    </div>
+
+    <!-- Quiz sonuç ekranı -->
+    <div id="sonucEkran" class="gizli">
+      <div class="soru" id="sonucSkor"></div>
+      <div style="color:var(--dim);margin-bottom:20px">Oturum tamamlandı.</div>
+      <button id="sonucGeri">← paketlere dön</button>
+    </div>
+  </div>
+
+<script type="module">
+  import { auth } from "./firebase.js";
+  import {
+    GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { kelimeEkle, kelimeleriGetir } from "./store.js";
+  import { quizBaslat } from "./quiz.js";
+
+  const $ = (id) => document.getElementById(id);
+  const saglayici = new GoogleAuthProvider();
+  let uid = null;        // o an giriş yapmış kullanıcının kimliği
+  let tumKelimeler = []; // son okunan tüm kelimeler (çeldirici havuzu için)
+
+  // Ekranlar arası geçiş: aynı anda tek ekran görünür
+  function ekran(ad) {
+    for (const id of ["panel", "quizEkran", "sonucEkran"])
+      $(id).classList.toggle("gizli", id !== ad);
+  }
+
+  // "Giriş yap" butonu → Google popup'ı aç
+  $("girisBtn").onclick = () => signInWithPopup(auth, saglayici).catch((e) => {
+    alert("Giriş başarısız: " + e.message);
+  });
+
+  // "Çıkış" butonu
+  $("cikisBtn").onclick = () => signOut(auth);
+
+  // GEÇİCİ: test kelimesi ekle
+  $("tEkle").onclick = async () => {
+    const term = $("tTerm").value.trim();
+    const tr   = $("tTr").value.trim();
+    if (!term || !tr) { $("tSonuc").textContent = "iki alanı da doldur"; return; }
+
+    const r = await kelimeEkle(uid, { term, definition_tr: tr });
+    if (r.ok) {
+      $("tSonuc").textContent = `eklendi → Paket ${r.package_no}`;
+      $("tTerm").value = ""; $("tTr").value = "";
+      listele();
+    } else if (r.reason === "zaten_var") {
+      $("tSonuc").textContent = "bu kelime zaten var";
+    } else {
+      $("tSonuc").textContent = "hata: " + (r.error ?? "");
+    }
+  };
+
+  // Kelimeleri okuyup paketleri kart olarak göster (her paket için "Quiz yap")
+  async function listele() {
+    tumKelimeler = await kelimeleriGetir(uid);
+    if (!tumKelimeler.length) {
+      $("liste").innerHTML = `<div class="not">henüz kelime yok — yukarıdan birkaç tane ekle</div>`;
+      return;
+    }
+    const paketler = {};
+    for (const k of tumKelimeler) (paketler[k.package_no] ??= []).push(k);
+
+    $("liste").innerHTML = "";
+    for (const no of Object.keys(paketler).sort((a, b) => a - b)) {
+      const kelimeler = paketler[no];
+      const kart = document.createElement("div");
+      kart.className = "paketKart";
+      kart.innerHTML = `
+        <div>
+          <div class="ad">Paket ${no}</div>
+          <div class="sayi">${kelimeler.length} kelime</div>
+        </div>`;
+      const btn = document.createElement("button");
+      btn.textContent = "Quiz yap";
+      btn.onclick = () => quizAc(kelimeler);
+      kart.append(btn);
+      $("liste").append(kart);
+    }
+  }
+
+  // Seçilen paketle quiz başlat
+  function quizAc(paket) {
+    if (tumKelimeler.length < 4) {
+      alert("Çoktan seçmeli quiz için en az 4 kelime gerekli.\nŞu an " + tumKelimeler.length + " tane var.");
+      return;
+    }
+    ekran("quizEkran");
+    quizBaslat(uid, paket, tumKelimeler, (dogru, toplam) => {
+      $("sonucSkor").textContent = `${dogru} / ${toplam}`;
+      ekran("sonucEkran");
+    });
+  }
+
+  $("qGeri").onclick = () => { ekran("panel"); listele(); };
+  $("sonucGeri").onclick = () => { ekran("panel"); listele(); };
+
+  // Giriş durumu değişince ekranı güncelle (sayfa açılışında da çalışır → oturum hatırlanır)
+  onAuthStateChanged(auth, (kullanici) => {
+    if (kullanici) {
+      uid = kullanici.uid;
+      $("giris").classList.add("gizli");
+      $("ad").textContent = kullanici.displayName ?? "";
+      $("email").textContent = kullanici.email ?? "";
+      ekran("panel");
+      listele();
+    } else {
+      uid = null;
+      $("giris").classList.remove("gizli");
+      ekran("panel"); // giriş gizli olduğundan hiçbir şey görünmez
+    }
+  });
+</script>
+</body>
+</html>

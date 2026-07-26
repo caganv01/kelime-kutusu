@@ -90,6 +90,13 @@
 <body>
   <h1>Kelime Kutusu</h1>
 
+  <!-- Giriş ekranı -->
+  <div id="girisEkrani">
+    <button id="girisBtn" style="margin-top: 0;">Google ile giriş yap</button>
+  </div>
+
+  <!-- Veriler ekranı (giriş sonrası) -->
+  <div id="verilerEkrani" class="gizli">
   <div class="kutular">
     <div class="kutu">
       <div class="sayi" id="toplam">–</div>
@@ -103,6 +110,7 @@
 
   <button id="quiz" disabled>Quiz başlat</button>
   <div class="bos gizli" id="bos">Henüz kelime kaydedilmemiş.<br><br>Herhangi bir web sayfasında İngilizce bir kelimeye çift tıkla ve türkçesini öğren!</div>
+  </div>
 
   <!-- Firebase SDK (compat) -->
   <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>

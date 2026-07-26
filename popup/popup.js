@@ -14,13 +14,30 @@ firebase.initializeApp(firebaseConfig);
 const firestore = firebase.firestore();
 const auth = firebase.auth();
 
+// Google Provider
+const provider = new firebase.auth.GoogleAuthProvider();
+
 let currentUserId = null;
+
+// Giriş butonu
+document.getElementById('girisBtn').addEventListener('click', async () => {
+  try {
+    const result = await auth.signInWithPopup(provider);
+    console.log('[kelime-kutusu popup] Giriş başarılı:', result.user.uid);
+  } catch (error) {
+    console.error('[kelime-kutusu popup] Giriş hatası:', error);
+  }
+});
 
 // Firebase auth state değişirse, Firestore listener başlat
 auth.onAuthStateChanged((user) => {
   currentUserId = user ? user.uid : null;
 
   if (user) {
+    // Giriş yapıldı → veriler ekranını göster
+    $('girisEkrani').classList.add('gizli');
+    $('verilerEkrani').classList.remove('gizli');
+
     // Firestore'dan real-time listener: paketleri otomatik güncelle
     const cardsRef = firestore.collection('users').doc(user.uid).collection('cards');
 
@@ -55,10 +72,8 @@ auth.onAuthStateChanged((user) => {
       $('bos').classList.add('gizli');
     });
   } else {
-    // Giriş yapılmadıysa
-    $('toplam').textContent = '–';
-    $('bekleyen').textContent = '–';
-    $('quiz').classList.add('gizli');
-    $('bos').classList.remove('gizli');
+    // Giriş yapılmadıysa → giriş ekranını göster
+    $('girisEkrani').classList.remove('gizli');
+    $('verilerEkrani').classList.add('gizli');
   }
 });

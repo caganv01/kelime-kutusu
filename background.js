@@ -17,11 +17,35 @@ const firestore = firebase.firestore();
 const auth = firebase.auth();
 
 let currentUserId = null;
+let firestoreUnsubscribe = null;
 
-// User auth state değişirse currentUserId güncelle
+// User auth state değişirse currentUserId güncelle + Firestore listener başlat/durdur
 auth.onAuthStateChanged((user) => {
   currentUserId = user ? user.uid : null;
   console.log('[kelime-kutusu] currentUserId:', currentUserId);
+
+  // popup'a auth state değişimini bildir
+  browser.runtime.sendMessage({ type: 'AUTH_STATE_CHANGED', uid: currentUserId }).catch(() => {});
+
+  // Firestore listener: paketleri dinle ve popup'a gönder
+  if (firestoreUnsubscribe) firestoreUnsubscribe();
+
+  if (user) {
+    const cardsRef = firestore.collection('users').doc(user.uid).collection('cards');
+    firestoreUnsubscribe = cardsRef.onSnapshot((snapshot) => {
+      const cards = snapshot.docs.map(d => d.data());
+      const now = Date.now();
+      const toplam = cards.length;
+      const bekleyen = cards.filter(c => c.due_at <= now).length;
+
+      // popup'a veri gönder
+      browser.runtime.sendMessage({
+        type: 'FIRESTORE_UPDATE',
+        toplam,
+        bekleyen
+      }).catch(() => {});
+    });
+  }
 });
 
 browser.runtime.onMessage.addListener(mesajIsle);
@@ -43,6 +67,17 @@ async function mesajIsle(msg) {
       return res;
     }
     case 'COUNT':  return sayac();
+    case 'GET_AUTH_STATE': return { uid: currentUserId };
+    case 'AUTH_LOGIN': {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try {
+        await auth.signInWithPopup(provider);
+        return { ok: true };
+      } catch (e) {
+        console.error('[kelime-kutusu] Auth hatası:', e);
+        return { ok: false, error: String(e) };
+      }
+    }
   }
 }
 

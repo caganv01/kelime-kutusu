@@ -4,10 +4,6 @@
   "version": "0.1.0",
   "description": "Okurken kelime yakala, sonra quiz yap.",
 
-  "content_security_policy": {
-    "extension_pages": "script-src 'self' https://www.gstatic.com; object-src 'self'"
-  },
-
   "browser_specific_settings": {
     "gecko": {
       "id": "@kelime-kutusu",

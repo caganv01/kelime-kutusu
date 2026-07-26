@@ -15,8 +15,8 @@ const $ = (id) => document.getElementById(id);
   const btn = $('quiz');
   btn.disabled = bekleyen === 0;
   btn.textContent = bekleyen === 0
-    ? 'Bugünlük bitti'
-    : `Quiz başlat (${Math.min(bekleyen, 20)})`;
+    ? '✓ Bugün tamamladın'
+    : `📝 Quiz başlat (${Math.min(bekleyen, 20)} soru)`;
 
   btn.onclick = () => {
     browser.tabs.create({ url: browser.runtime.getURL('quiz/quiz.html') });

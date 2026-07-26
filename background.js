@@ -1,3 +1,29 @@
+// Firebase SDK
+importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js');
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAbaNtSVqH_R18YHwG8_SmK5nX4rKW-ik0",
+  authDomain: "kelime-kutusu-dca48.firebaseapp.com",
+  projectId: "kelime-kutusu-dca48",
+  storageBucket: "kelime-kutusu-dca48.firebasestorage.app",
+  messagingSenderId: "999675176536",
+  appId: "1:999675176536:web:9d178401992e911a704c2d"
+};
+
+firebase.initializeApp(firebaseConfig);
+const firestore = firebase.firestore();
+const auth = firebase.auth();
+
+let currentUserId = null;
+
+// User auth state değişirse currentUserId güncelle
+auth.onAuthStateChanged((user) => {
+  currentUserId = user ? user.uid : null;
+  console.log('[kelime-kutusu] currentUserId:', currentUserId);
+});
+
 browser.runtime.onMessage.addListener(mesajIsle);
 
 browser.runtime.onInstalled.addListener(async () => {
@@ -8,8 +34,69 @@ browser.runtime.onInstalled.addListener(async () => {
 async function mesajIsle(msg) {
   switch (msg.type) {
     case 'LOOKUP': return cevir(msg.term);
-    case 'SAVE':   return kelimeEkle(msg.payload);
+    case 'SAVE':   {
+      const res = await kelimeEkle(msg.payload);
+      // Başarılıysa Firebase'e de yaz (paket atamsı ile transaction)
+      if (res.ok && currentUserId) {
+        await kelimeFirebase(currentUserId, msg.payload);
+      }
+      return res;
+    }
     case 'COUNT':  return sayac();
+  }
+}
+
+async function kelimeFirebase(uid, { term, definition_tr, context, url }) {
+  // Web app'ın store.js ile aynı mantık: transaction ile paket ataması
+  const id = term.toLowerCase().trim();
+  const now = Date.now();
+
+  try {
+    await firestore.runTransaction(async (tx) => {
+      // 1) Kelime zaten var mı?
+      const kartRef = firestore.collection('users').doc(uid).collection('cards').doc(id);
+      const kartSnap = await tx.get(kartRef);
+      if (kartSnap.exists()) {
+        console.log('[kelime-kutusu] Kelime zaten var:', id);
+        return;
+      }
+
+      // 2) Meta durumu oku (hangi paket açık, kaçıncı pozisyon)
+      const metaRef = firestore.collection('users').doc(uid).collection('meta').doc('state');
+      const metaSnap = await tx.get(metaRef);
+      let openPackageNo = 1, openPackageCount = 0;
+      if (metaSnap.exists()) {
+        const meta = metaSnap.data();
+        openPackageNo = meta.openPackageNo || 1;
+        openPackageCount = meta.openPackageCount || 0;
+      }
+
+      // 3) Paket 20 kelimeye ulaştıysa yeni pakete geç
+      if (openPackageCount >= 20) {
+        openPackageNo += 1;
+        openPackageCount = 0;
+      }
+      openPackageCount += 1;
+
+      // 4) Transaction'da meta + kelimeyi yaz (atomik)
+      tx.set(metaRef, { openPackageNo, openPackageCount });
+      tx.set(kartRef, {
+        term: id,
+        definition_tr,
+        context: context || '',
+        source_url: url || '',
+        package_no: openPackageNo,
+        difficulty: 5.0,
+        stability: 0.0,
+        reps: 0,
+        due_at: now,
+        created_at: now,
+        updated_at: now
+      });
+    });
+    console.log('[kelime-kutusu] Firebase yazıldı (paket atamsı):', id);
+  } catch (e) {
+    console.error('[kelime-kutusu] Firebase hatası:', e);
   }
 }
 

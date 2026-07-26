@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "description": "Okurken kelime yakala, sonra quiz yap.",
 
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' https://www.gstatic.com; object-src 'self'"
+  },
+
   "browser_specific_settings": {
     "gecko": {
       "id": "@kelime-kutusu",
@@ -12,8 +16,13 @@
     }
   },
 
-  "permissions": ["storage", "unlimitedStorage"],
-  "host_permissions": ["https://api.mymemory.translated.net/*"],
+  "permissions": ["storage", "identity"],
+  "host_permissions": [
+    "https://api.mymemory.translated.net/*",
+    "https://identitytoolkit.googleapis.com/*",
+    "https://securetoken.googleapis.com/*",
+    "https://firestore.googleapis.com/*"
+  ],
 
   "background": {
     "scripts": ["lib/dexie.js", "db.js", "background.js"]

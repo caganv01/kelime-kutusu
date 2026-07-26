@@ -1,7 +1,7 @@
-// Firebase SDK
-importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js');
+// Firebase SDK (local - CSP uyumluluğu)
+importScripts('lib/firebase-app-compat.js');
+importScripts('lib/firebase-firestore-compat.js');
+importScripts('lib/firebase-auth-compat.js');
 
 const firebaseConfig = {
   apiKey: "AIzaSyAbaNtSVqH_R18YHwG8_SmK5nX4rKW-ik0",

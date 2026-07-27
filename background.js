@@ -11,10 +11,10 @@ const firebaseConfig = {
   appId: "1:999675176536:web:9d178401992e911a704c2d"
 };
 
-// Google Cloud Console → "OAuth 2.0 Client ID" → tür: Web application.
-// Yetkili yönlendirme URI'si olarak browser.identity.getRedirectURL() değeri
-// eklenmelidir (popup, ayarlanmadığında bu adresi ekranda gösterir).
-const OAUTH_CLIENT_ID = 'BURAYA_CLIENT_ID.apps.googleusercontent.com';
+// Firebase'in Google girişi için otomatik oluşturduğu Web OAuth istemcisi.
+// Yetkili yönlendirme URI'leri arasında browser.identity.getRedirectURL()
+// değeri kayıtlıdır. Client ID gizli değildir — apiKey gibi istemciye gider.
+const OAUTH_CLIENT_ID = '999675176536-3cfjft67n5t8e0uuqugd6sho96ee310i.apps.googleusercontent.com';
 
 firebase.initializeApp(firebaseConfig);
 const firestore = firebase.firestore();

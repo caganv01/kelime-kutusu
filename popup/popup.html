@@ -85,6 +85,27 @@
     text-align: center;
   }
   .gizli { display: none; }
+
+  .not {
+    margin-top: 10px;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--dim);
+    text-align: center;
+  }
+
+  .adres {
+    margin-top: 6px;
+    padding: 7px 8px;
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    font-size: 9px;
+    line-height: 1.4;
+    color: var(--accent);
+    word-break: break-all;
+    user-select: all;
+  }
 </style>
 </head>
 <body>
@@ -93,23 +114,25 @@
   <!-- Giriş ekranı -->
   <div id="girisEkrani">
     <button id="girisBtn" style="margin-top: 0;">Google ile giriş yap</button>
+    <div class="not gizli" id="girisNot"></div>
+    <div class="adres gizli" id="girisAdres"></div>
   </div>
 
   <!-- Veriler ekranı (giriş sonrası) -->
   <div id="verilerEkrani" class="gizli">
-  <div class="kutular">
-    <div class="kutu">
-      <div class="sayi" id="toplam">–</div>
-      <div class="etiket">kaydedilen kelime</div>
+    <div class="kutular">
+      <div class="kutu">
+        <div class="sayi" id="toplam">–</div>
+        <div class="etiket">kaydedilen kelime</div>
+      </div>
+      <div class="kutu">
+        <div class="sayi vurgu" id="bekleyen">–</div>
+        <div class="etiket">bugün bekleniyor</div>
+      </div>
     </div>
-    <div class="kutu">
-      <div class="sayi vurgu" id="bekleyen">–</div>
-      <div class="etiket">bugün bekleniyor</div>
-    </div>
-  </div>
 
-  <button id="quiz" disabled>Quiz başlat</button>
-  <div class="bos gizli" id="bos">Henüz kelime kaydedilmemiş.<br><br>Herhangi bir web sayfasında İngilizce bir kelimeye çift tıkla ve türkçesini öğren!</div>
+    <button id="quiz" disabled>Quiz başlat</button>
+    <div class="bos gizli" id="bos">Henüz kelime kaydedilmemiş.<br><br>Herhangi bir web sayfasında İngilizce bir kelimeye çift tıkla ve türkçesini öğren!</div>
   </div>
 
   <script src="popup.js"></script>

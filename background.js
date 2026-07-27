@@ -1,7 +1,6 @@
-// Firebase SDK (local - CSP uyumluluğu)
-importScripts('lib/firebase-app-compat.js');
-importScripts('lib/firebase-firestore-compat.js');
-importScripts('lib/firebase-auth-compat.js');
+// Firebase SDK ve Dexie manifest.json'daki background.scripts ile yüklenir.
+// Firefox MV3'te arka plan bir *event page*'dir (service worker değil), bu yüzden
+// importScripts() burada tanımlı değildir — kütüphaneler manifest'ten gelir.
 
 const firebaseConfig = {
   apiKey: "AIzaSyAbaNtSVqH_R18YHwG8_SmK5nX4rKW-ik0",
@@ -12,40 +11,46 @@ const firebaseConfig = {
   appId: "1:999675176536:web:9d178401992e911a704c2d"
 };
 
+// Google Cloud Console → "OAuth 2.0 Client ID" → tür: Web application.
+// Yetkili yönlendirme URI'si olarak browser.identity.getRedirectURL() değeri
+// eklenmelidir (popup, ayarlanmadığında bu adresi ekranda gösterir).
+const OAUTH_CLIENT_ID = 'BURAYA_CLIENT_ID.apps.googleusercontent.com';
+
 firebase.initializeApp(firebaseConfig);
 const firestore = firebase.firestore();
 const auth = firebase.auth();
 
 let currentUserId = null;
-let firestoreUnsubscribe = null;
+let sonSayac = null;          // son bilinen {toplam, bekleyen}
+let kartlariBirak = null;     // aktif onSnapshot aboneliğini kapatan fonksiyon
 
-// User auth state değişirse currentUserId güncelle + Firestore listener başlat/durdur
+// Firebase oturumu IndexedDB'den geri yüklenene kadar bekleyenler için.
+let authCozuldu;
+const authHazir = new Promise((r) => { authCozuldu = r; });
+
+const kartlarRef = (uid) => firestore.collection('users').doc(uid).collection('cards');
+const metaRef    = (uid) => firestore.collection('users').doc(uid).collection('meta').doc('state');
+
 auth.onAuthStateChanged((user) => {
   currentUserId = user ? user.uid : null;
-  console.log('[kelime-kutusu] currentUserId:', currentUserId);
+  sonSayac = null;
+  console.log('[kelime-kutusu] oturum:', currentUserId);
 
-  // popup'a auth state değişimini bildir
-  browser.runtime.sendMessage({ type: 'AUTH_STATE_CHANGED', uid: currentUserId }).catch(() => {});
+  yayinla({ type: 'AUTH_STATE_CHANGED', uid: currentUserId });
 
-  // Firestore listener: paketleri dinle ve popup'a gönder
-  if (firestoreUnsubscribe) firestoreUnsubscribe();
+  if (kartlariBirak) { kartlariBirak(); kartlariBirak = null; }
 
   if (user) {
-    const cardsRef = firestore.collection('users').doc(user.uid).collection('cards');
-    firestoreUnsubscribe = cardsRef.onSnapshot((snapshot) => {
-      const cards = snapshot.docs.map(d => d.data());
-      const now = Date.now();
-      const toplam = cards.length;
-      const bekleyen = cards.filter(c => c.due_at <= now).length;
-
-      // popup'a veri gönder
-      browser.runtime.sendMessage({
-        type: 'FIRESTORE_UPDATE',
-        toplam,
-        bekleyen
-      }).catch(() => {});
-    });
+    kartlariBirak = kartlarRef(user.uid).onSnapshot(
+      (anlik) => {
+        sonSayac = sayacHesapla(anlik.docs.map((d) => d.data()));
+        yayinla({ type: 'FIRESTORE_UPDATE', ...sonSayac });
+      },
+      (e) => console.error('[kelime-kutusu] dinleme hatası:', e)
+    );
   }
+
+  authCozuldu();
 });
 
 browser.runtime.onMessage.addListener(mesajIsle);
@@ -58,64 +63,113 @@ browser.runtime.onInstalled.addListener(async () => {
 async function mesajIsle(msg) {
   switch (msg.type) {
     case 'LOOKUP': return cevir(msg.term);
-    case 'SAVE':   {
-      const res = await kelimeEkle(msg.payload);
-      // Başarılıysa Firebase'e de yaz (paket atamsı ile transaction)
-      if (res.ok && currentUserId) {
-        await kelimeFirebase(currentUserId, msg.payload);
-      }
-      return res;
+
+    case 'SAVE': {
+      const yerel = await kelimeEkle(msg.payload);
+      // Buluta yazım yerel sonuca bağlı değil: kelime yerelde varken buluta
+      // hiç gitmemiş olabilir. Mükerrerliği Firestore transaction'ı eler.
+      const bulut = currentUserId ? await kelimeFirebase(currentUserId, msg.payload) : null;
+      return { ...yerel, ok: yerel.ok || Boolean(bulut?.ok) };
     }
-    case 'COUNT':  return sayac();
-    case 'GET_AUTH_STATE': return { uid: currentUserId };
-    case 'AUTH_LOGIN': {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      try {
-        await auth.signInWithPopup(provider);
-        return { ok: true };
-      } catch (e) {
-        console.error('[kelime-kutusu] Auth hatası:', e);
-        return { ok: false, error: String(e) };
-      }
+
+    case 'COUNT': return sayac();
+
+    case 'GET_STATE': {
+      await authHazir;
+      if (!currentUserId) return { uid: null };
+      const s = sonSayac ?? await sayacGetir(currentUserId);
+      return { uid: currentUserId, ...s };
     }
+
+    case 'AUTH_LOGIN':  return girisYap();
+    case 'AUTH_LOGOUT': { await auth.signOut(); return { ok: true }; }
   }
 }
 
+// Eklentide signInWithPopup çalışmaz: Firebase, çağıran origin'in "yetkili alan
+// adı" olmasını ister ve moz-extension:// böyle bir alan adı olamaz. Bunun yerine
+// Google'dan launchWebAuthFlow ile id_token alıp signInWithCredential kullanıyoruz.
+async function girisYap() {
+  const yonlendirme = browser.identity.getRedirectURL();
+
+  if (OAUTH_CLIENT_ID.startsWith('BURAYA_')) {
+    console.error('[kelime-kutusu] OAUTH_CLIENT_ID ayarlanmadı. Yönlendirme URI:', yonlendirme);
+    return { ok: false, hata: 'client_id_yok', yonlendirme };
+  }
+
+  try {
+    const adres = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    adres.searchParams.set('client_id', OAUTH_CLIENT_ID);
+    adres.searchParams.set('response_type', 'id_token');
+    adres.searchParams.set('redirect_uri', yonlendirme);
+    adres.searchParams.set('scope', 'openid email profile');
+    adres.searchParams.set('nonce', crypto.randomUUID());
+    adres.searchParams.set('prompt', 'select_account');
+
+    const cevap = await browser.identity.launchWebAuthFlow({
+      url: adres.toString(),
+      interactive: true
+    });
+
+    // id_token yanıt URL'sinin fragment kısmında döner.
+    const idToken = new URLSearchParams(new URL(cevap).hash.slice(1)).get('id_token');
+    if (!idToken) return { ok: false, hata: 'token_yok' };
+
+    await auth.signInWithCredential(firebase.auth.GoogleAuthProvider.credential(idToken));
+    return { ok: true };
+  } catch (e) {
+    console.error('[kelime-kutusu] giriş hatası:', e);
+    return { ok: false, hata: String(e) };
+  }
+}
+
+function sayacHesapla(kartlar) {
+  const simdi = Date.now();
+  return {
+    toplam: kartlar.length,
+    bekleyen: kartlar.filter((k) => k.due_at <= simdi).length
+  };
+}
+
+async function sayacGetir(uid) {
+  const anlik = await kartlarRef(uid).get();
+  return sayacHesapla(anlik.docs.map((d) => d.data()));
+}
+
+// Popup kapalıyken sendMessage reddeder; bu beklenen bir durum, sessizce geçiyoruz.
+function yayinla(msg) {
+  browser.runtime.sendMessage(msg).catch(() => {});
+}
+
 async function kelimeFirebase(uid, { term, definition_tr, context, url }) {
-  // Web app'ın store.js ile aynı mantık: transaction ile paket ataması
+  // web/store.js ile aynı mantık: paket ataması transaction içinde yapılır.
   const id = term.toLowerCase().trim();
   const now = Date.now();
 
   try {
-    await firestore.runTransaction(async (tx) => {
-      // 1) Kelime zaten var mı?
-      const kartRef = firestore.collection('users').doc(uid).collection('cards').doc(id);
-      const kartSnap = await tx.get(kartRef);
-      if (kartSnap.exists()) {
-        console.log('[kelime-kutusu] Kelime zaten var:', id);
-        return;
-      }
+    return await firestore.runTransaction(async (tx) => {
+      // 1) Kelime zaten var mı? (compat SDK'da exists bir özellik, metot değil)
+      const kart = kartlarRef(uid).doc(id);
+      const kartAnlik = await tx.get(kart);
+      if (kartAnlik.exists) return { ok: false, reason: 'zaten_var' };
 
-      // 2) Meta durumu oku (hangi paket açık, kaçıncı pozisyon)
-      const metaRef = firestore.collection('users').doc(uid).collection('meta').doc('state');
-      const metaSnap = await tx.get(metaRef);
+      // 2) Açık paketi oku (meta yoksa Paket 1'den başla)
+      const meta = metaRef(uid);
+      const metaAnlik = await tx.get(meta);
       let openPackageNo = 1, openPackageCount = 0;
-      if (metaSnap.exists()) {
-        const meta = metaSnap.data();
-        openPackageNo = meta.openPackageNo || 1;
-        openPackageCount = meta.openPackageCount || 0;
+      if (metaAnlik.exists) {
+        const d = metaAnlik.data();
+        openPackageNo    = d.openPackageNo    || 1;
+        openPackageCount = d.openPackageCount || 0;
       }
 
-      // 3) Paket 20 kelimeye ulaştıysa yeni pakete geç
-      if (openPackageCount >= 20) {
-        openPackageNo += 1;
-        openPackageCount = 0;
-      }
+      // 3) Paket 20'ye ulaştıysa yenisini aç
+      if (openPackageCount >= 20) { openPackageNo += 1; openPackageCount = 0; }
       openPackageCount += 1;
 
-      // 4) Transaction'da meta + kelimeyi yaz (atomik)
-      tx.set(metaRef, { openPackageNo, openPackageCount });
-      tx.set(kartRef, {
+      // 4) meta + kelimeyi aynı transaction'da yaz
+      tx.set(meta, { openPackageNo, openPackageCount });
+      tx.set(kart, {
         term: id,
         definition_tr,
         context: context || '',
@@ -128,10 +182,12 @@ async function kelimeFirebase(uid, { term, definition_tr, context, url }) {
         created_at: now,
         updated_at: now
       });
+
+      return { ok: true, id, package_no: openPackageNo };
     });
-    console.log('[kelime-kutusu] Firebase yazıldı (paket atamsı):', id);
   } catch (e) {
-    console.error('[kelime-kutusu] Firebase hatası:', e);
+    console.error('[kelime-kutusu] Firebase yazma hatası:', e);
+    return { ok: false, reason: 'hata' };
   }
 }
 

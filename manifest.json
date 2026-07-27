@@ -21,7 +21,14 @@
   ],
 
   "background": {
-    "scripts": ["lib/dexie.js", "db.js", "background.js"]
+    "scripts": [
+      "lib/firebase-app-compat.js",
+      "lib/firebase-firestore-compat.js",
+      "lib/firebase-auth-compat.js",
+      "lib/dexie.js",
+      "db.js",
+      "background.js"
+    ]
   },
 
   "content_scripts": [

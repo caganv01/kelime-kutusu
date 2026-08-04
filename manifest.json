@@ -22,19 +22,21 @@
 
   "background": {
     "scripts": [
+      "lib/browser-polyfill.js",
       "lib/firebase-app-compat.js",
       "lib/firebase-firestore-compat.js",
       "lib/firebase-auth-compat.js",
       "lib/dexie.js",
       "db.js",
       "background.js"
-    ]
+    ],
+    "service_worker": "background.js"
   },
 
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["lib/browser-polyfill.js", "content.js"]
     }
   ],
 

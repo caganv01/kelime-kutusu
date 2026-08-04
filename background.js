@@ -2,6 +2,19 @@
 // Firefox MV3'te arka plan bir *event page*'dir (service worker değil), bu yüzden
 // importScripts() burada tanımlı değildir — kütüphaneler manifest'ten gelir.
 
+// Brave/Chromium: service worker tek dosyadır, kütüphaneleri burada yükleriz.
+// Firefox: importScripts tanımsızdır; kütüphaneler zaten manifest.scripts'ten gelir.
+if (typeof importScripts === 'function') {
+  importScripts(
+    'lib/browser-polyfill.js',
+    'lib/firebase-app-compat.js',
+    'lib/firebase-firestore-compat.js',
+    'lib/firebase-auth-compat.js',
+    'lib/dexie.js',
+    'db.js'
+  );
+}
+
 const firebaseConfig = {
   apiKey: "AIzaSyAbaNtSVqH_R18YHwG8_SmK5nX4rKW-ik0",
   authDomain: "kelime-kutusu-dca48.firebaseapp.com",
